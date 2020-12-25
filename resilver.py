@@ -1,6 +1,7 @@
-import json, sys, re, subprocess, time
+import json, sys, re, subprocess, time, threading
 from pushover import init, Client
 
+TIME_INTERVAL = 900 # 15 minutes
 user_key = None
 application_key = None
 client = None
@@ -31,7 +32,14 @@ def get_status():
     raw = subprocess.run(['zpool','status','MediaVolume'], stdout=subprocess.PIPE).stdout.decode('utf-8')
     return float(re.findall(reg,raw)[0].replace('%',''))
 
+# Check the current resilver status and send it in a notification via Pushover
+def monitor_resilver():
+    notify(get_status())
+
 get_credentials()
 client = initialise_client()
-get_status()
-notify(12)
+resilver = threading.Event()
+
+# Check the resilver status every 15 minutes
+while not resilver.wait(TIME_INTERVAL):
+    monitor_resilver()
